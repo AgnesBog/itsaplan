@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { Check, Copy } from 'lucide-react';
 import type { ChatMessage } from '@/hooks/useAgentChat';
 import { cn } from '@/lib/utils';
 import type { AiChatPart, AiChatToolPart } from '@/lib/api/endpoints/agentChat';
@@ -9,6 +11,7 @@ import { Bubble, BubbleContent } from '@/components/ui/bubble';
 import { Marker, MarkerContent } from '@/components/ui/marker';
 import { Message, MessageContent, MessageFooter } from '@/components/ui/message';
 import { MessageScrollerItem } from '@/components/ui/message-scroller';
+import { Button } from '@/components/ui/button';
 import AgentChatToolCalls from './AgentChatToolCalls';
 import AgentChatUserText from './AgentChatUserText';
 import { useTranslations } from 'next-intl';
@@ -31,6 +34,14 @@ function blocksOf(parts: AiChatPart[]): Block[] {
   return blocks;
 }
 
+function getMessageText(parts: AiChatPart[]): string {
+  return parts
+    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+    .map((p) => p.text)
+    .join('\n\n')
+    .trim();
+}
+
 export default function AgentChatMessage({
   message,
   showDate,
@@ -41,7 +52,36 @@ export default function AgentChatMessage({
   complete?: boolean;
 }) {
   const t = useTranslations('common.agentChat');
+  const tc = useTranslations('common');
   const isUser = message.role === 'user';
+  const [copied, setCopied] = useState(false);
+
+  const textToCopy = getMessageText(message.parts);
+
+  const handleCopy = async () => {
+    if (!textToCopy) return;
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } catch {
+        // Ignore clipboard failure
+      }
+    }
+  };
 
   return (
     <MessageScrollerItem
@@ -72,10 +112,30 @@ export default function AgentChatMessage({
             )}
           </Bubble>
           {message.error && <p className="text-xs text-destructive">{message.error}</p>}
-          <MessageFooter>
-            {message.stopped
-              ? `${t('stopped')} · ${formatTime(message.createdAt)}`
-              : formatTime(message.createdAt)}
+          <MessageFooter className="flex items-center gap-1.5">
+            <span>
+              {message.stopped
+                ? `${t('stopped')} · ${formatTime(message.createdAt)}`
+                : formatTime(message.createdAt)}
+            </span>
+            {!isUser && textToCopy && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                title={copied ? tc('copied') : tc('copy')}
+                onClick={() => void handleCopy()}
+                className={cn(
+                  'size-6 rounded-md text-muted-foreground transition-opacity hover:text-foreground',
+                  copied
+                    ? 'opacity-100 text-emerald-600 dark:text-emerald-400'
+                    : 'opacity-70 sm:opacity-0 sm:group-hover/message:opacity-100 focus-visible:opacity-100',
+                )}
+              >
+                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                <span className="sr-only">{copied ? tc('copied') : tc('copy')}</span>
+              </Button>
+            )}
           </MessageFooter>
         </MessageContent>
       </Message>
