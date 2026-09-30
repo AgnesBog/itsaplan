@@ -91,7 +91,7 @@ export function TableRow({
           onClick();
         }}
         className={cn(
-          'relative grid cursor-grab gap-3 border-b py-2 pr-4 text-sm transition-colors sm:touch-none',
+          'relative grid cursor-grab gap-3 border-b py-2 pr-4 text-sm transition-colors touch-pan-y',
           isBlocked(issue) ? 'row-blocked' : 'hover:bg-accent/40',
           alignTop ? 'items-start' : 'items-center',
           indented ? 'pl-9' : 'pl-4',

@@ -1,7 +1,6 @@
 import {
   KeyboardSensor,
   MouseSensor,
-  PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -27,7 +26,8 @@ export const DRAG_ACTIVATION_DISTANCE = 4;
 // instance, so the sensor-array length still never changes between its renders.
 export function useDndSensors(inert = false) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const inertSensors = useSensors();

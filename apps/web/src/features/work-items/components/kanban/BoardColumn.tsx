@@ -198,7 +198,7 @@ export function BoardColumn({
       <div
         ref={mergedRef}
         className={cn(
-          'min-h-0 flex-1 overflow-y-auto rounded-md',
+          'min-h-0 flex-1 overflow-y-auto rounded-md touch-pan-y overscroll-contain',
           isOverColumn && 'bg-kanban-column-raised',
         )}
       >

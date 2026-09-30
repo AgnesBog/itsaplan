@@ -146,7 +146,7 @@ export default function TableView({
       onDragCancel={reorder.onDragCancel}
       onDragEnd={reorder.onDragEnd}
     >
-      <div ref={scrollRef} className="h-full overflow-y-auto">
+      <div ref={scrollRef} className="h-full overflow-y-auto touch-pan-y overscroll-contain">
         <TableColumnHeader
           columns={columns}
           gridTemplate={gridTemplate}
