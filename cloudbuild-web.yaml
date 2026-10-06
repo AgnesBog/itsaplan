@@ -1,0 +1,13 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/taskflow-509812/taskflow/itsaplan-web:latest'
+      - '-f'
+      - 'apps/web/Dockerfile'
+      - '.'
+images:
+  - 'europe-west1-docker.pkg.dev/taskflow-509812/taskflow/itsaplan-web:latest'
+options:
+  machineType: 'E2_HIGHCPU_8'

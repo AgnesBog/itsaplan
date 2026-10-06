@@ -1,0 +1,46 @@
+steps:
+  # 1. Take logical backup using pg_dump in PostgreSQL custom format (-Fc) and verify readability
+  - name: 'postgres:alpine'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        TIMESTAMP=$$(date +%Y%m%d-%H%M%S)
+        BACKUP_FILE="taskflow-prod-$${TIMESTAMP}.dump"
+        echo "=== 1. Starting pg_dump for TaskFlow production database ==="
+        pg_dump -Fc --no-owner --no-privileges "$$DATABASE_URL" -f "/workspace/$${BACKUP_FILE}"
+        
+        echo "=== 2. Verifying dump structure with pg_restore --list ==="
+        pg_restore --list "/workspace/$${BACKUP_FILE}" > /workspace/toc.txt
+        ENTRY_COUNT=$$(wc -l < /workspace/toc.txt)
+        echo "Structural integrity check PASSED: TOC contains $${ENTRY_COUNT} catalog entries."
+        head -n 25 /workspace/toc.txt
+        
+        FILE_SIZE=$$(ls -lh "/workspace/$${BACKUP_FILE}" | awk '{print $$5}')
+        echo "Backup file size: $${FILE_SIZE}"
+        echo "$${BACKUP_FILE}" > /workspace/backup_filename.txt
+    secretEnv: ['DATABASE_URL']
+
+  # 2. Upload to Google Cloud Storage
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:alpine'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        BACKUP_FILE=$$(cat /workspace/backup_filename.txt)
+        DESTINATION="gs://taskflow-attachments-509812/backups/$${BACKUP_FILE}"
+        echo "=== 3. Uploading $${BACKUP_FILE} to $${DESTINATION} ==="
+        gcloud storage cp "/workspace/$${BACKUP_FILE}" "$${DESTINATION}"
+        
+        echo "=== 4. Verifying GCS object ==="
+        gcloud storage ls -l "$${DESTINATION}"
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/taskflow-509812/secrets/neon-database-url/versions/latest
+      env: 'DATABASE_URL'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
