@@ -344,8 +344,12 @@ export default function NewIssueModal({
       fullscreen={fullscreen}
       onToggleFullscreen={onToggleFullscreen}
       // Halves the dialog's bottom padding: the footer then sits as far from the
-      // separator above it as from the dialog edge below.
-      className="pb-3"
+      // separator above it as from the dialog edge below. On mobile fullscreen, use
+      // dynamic viewport height (100dvh) and respect safe area insets.
+      className={cn(
+        'pb-3',
+        fullscreen && 'h-[100dvh] max-h-[100dvh] pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]',
+      )}
     >
       <div
         className={cn('flex min-h-0 flex-col', fullscreen && 'flex-1 overflow-hidden')}
@@ -513,7 +517,7 @@ export default function NewIssueModal({
           className={cn(
             'flex items-center gap-2 border-t pt-3',
             fullscreen
-              ? 'sticky bottom-0 z-20 mt-auto bg-background/95 pb-2 pt-3 backdrop-blur-sm'
+              ? 'sticky bottom-0 z-20 mt-auto bg-background/95 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-sm'
               : 'mt-4',
           )}
         >
