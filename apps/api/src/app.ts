@@ -75,7 +75,7 @@ export const app = new Elysia()
       },
       documentation: {
         info: {
-          title: "It's a Plan API",
+          title: 'TaskFlow API',
           version: pkg.version,
           description: apiDescription,
         },
@@ -98,6 +98,14 @@ export const app = new Elysia()
           {
             name: 'Agent Runner',
             description: "Run queue an external agent's runner drains with the agent's API key",
+          },
+          {
+            name: 'Capabilities',
+            description: 'External business OS capabilities, local runner queue, and status tracking',
+          },
+          {
+            name: 'Routines',
+            description: 'Recurring work routines, recurrence cadences, and execution policies',
           },
           {
             name: 'Agent Chat',

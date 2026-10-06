@@ -1,0 +1,6 @@
+{
+  "url": "https://api.app.journaltogrow.com",
+  "apiKey": "itp_sAimRWelyMaXPNWzwgyvMIfNnzCJtsQivDWbzxgvmPDIEuJHpFxZSZWOFUdAQwSZ",
+  "pollIntervalSec": 10,
+  "heartbeatIntervalSec": 30
+}

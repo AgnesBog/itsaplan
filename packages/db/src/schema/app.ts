@@ -1285,6 +1285,15 @@ export const issue = pgTable(
     cycleId: integer('cycle_id').references(() => cycle.id, {
       onDelete: 'set null',
     }),
+    // The routine this issue is an occurrence of. Nullable; unlinked if routine deleted.
+    routineId: integer('routine_id').references((): AnyPgColumn => routineDefinition.id, {
+      onDelete: 'set null',
+    }),
+    // Occurrence-level input overrides for capabilities attached to this routine
+    routineOverridePayload: jsonb('routine_override_payload')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
     columnId: integer('column_id')
       .notNull()
       .references(() => projectColumn.id),
@@ -1350,6 +1359,10 @@ export const issue = pgTable(
     index('issue_cycle_idx')
       .on(t.cycleId)
       .where(sql`${t.cycleId} IS NOT NULL`),
+    // Backs occurrences lookup for a routine definition
+    index('issue_routine_idx')
+      .on(t.routineId)
+      .where(sql`${t.routineId} IS NOT NULL`),
   ],
 );
 
@@ -2348,3 +2361,126 @@ export const documentComment = pgTable(
   },
   (t) => [index('document_comment_document_idx').on(t.documentId, t.createdAt)],
 );
+
+// A registered external capability (local runner script, cloud HTTP webhook, or agent)
+export const capability = pgTable(
+  'capability',
+  {
+    id: text('id').primaryKey(),
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => team.id, { onDelete: 'cascade' }),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    executionType: text('execution_type').notNull(), // 'local_runner' | 'cloud_http' | 'ai_agent'
+    brandRestrictionId: text('brand_restriction_id'), // optional restriction; null = reusable across all brands
+    executionConfig: jsonb('execution_config').$type<Record<string, unknown>>().notNull().default({}),
+    inputSchema: jsonb('input_schema').$type<Record<string, unknown>>().notNull().default({}),
+    timeoutSeconds: integer('timeout_seconds').notNull().default(3600),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('capability_team_slug_idx').on(t.teamId, t.slug),
+    index('capability_team_type_idx').on(t.teamId, t.executionType),
+  ],
+);
+
+// A single execution invocation of a capability
+export const capabilityInvocation = pgTable(
+  'capability_invocation',
+  {
+    id: serial('id').primaryKey(),
+    requestId: text('request_id').notNull().unique(), // unique idempotent request identifier
+    capabilityId: text('capability_id')
+      .notNull()
+      .references(() => capability.id, { onDelete: 'cascade' }),
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => team.id, { onDelete: 'cascade' }),
+    issueId: integer('issue_id').references(() => issue.id, { onDelete: 'set null' }),
+    brandId: text('brand_id'), // active brand/business context for this run
+    status: text('status').notNull().default('queued'), // 'queued' | 'running' | 'ready_for_approval' | 'completed' | 'partial' | 'failed'
+    exitCode: integer('exit_code'),
+    message: text('message'),
+    reviewUrl: text('review_url'), // external approval or review dashboard URL
+    inputPayload: jsonb('input_payload').$type<Record<string, unknown>>().notNull().default({}),
+    outputPayload: jsonb('output_payload').$type<Record<string, unknown>>().notNull().default({}),
+    error: text('error'),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }), // explicit lease expiration timestamp
+    lastHeartbeatAt: timestamp('last_heartbeat_at', { withTimezone: true }),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('capability_inv_team_status_idx').on(t.teamId, t.status),
+    index('capability_inv_issue_idx').on(t.issueId),
+    index('capability_inv_lease_idx').on(t.status, t.leaseExpiresAt),
+  ],
+);
+
+export type Capability = typeof capability.$inferSelect;
+export type NewCapability = typeof capability.$inferInsert;
+export type CapabilityInvocation = typeof capabilityInvocation.$inferSelect;
+export type NewCapabilityInvocation = typeof capabilityInvocation.$inferInsert;
+
+// A recurring work definition / routine for TaskFlow / QMW
+export const routineDefinition = pgTable(
+  'routine_definition',
+  {
+    id: serial('id').primaryKey(),
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => team.id, { onDelete: 'cascade' }),
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description').notNull().default(''),
+    slug: text('slug'),
+    // Recurrence strategy: 'calendar' | 'completion_relative' | 'cycle' | 'manual'
+    cadenceType: text('cadence_type').notNull(),
+    cadenceConfig: jsonb('cadence_config').$type<Record<string, unknown>>().notNull().default({}),
+    // Execution policy: 'human_task' | 'human_triggered' | 'automated_capability'
+    executionPolicy: text('execution_policy').notNull().default('human_triggered'),
+    capabilityId: text('capability_id').references(() => capability.id, { onDelete: 'set null' }),
+    defaultInputPayload: jsonb('default_input_payload').$type<Record<string, unknown>>().notNull().default({}),
+    issueTemplate: jsonb('issue_template').$type<Record<string, unknown>>().notNull().default({}),
+    targetInitiativeId: integer('target_initiative_id').references(() => initiative.id, { onDelete: 'set null' }),
+    targetColumnId: integer('target_column_id').references(() => projectColumn.id, { onDelete: 'set null' }),
+    status: text('status').notNull().default('active'), // 'active' | 'paused' | 'archived'
+    activeIssueId: integer('active_issue_id').references((): AnyPgColumn => issue.id, { onDelete: 'set null' }),
+    nextDueDate: timestamp('next_due_date', { withTimezone: true }),
+    lastCompletedAt: timestamp('last_completed_at', { withTimezone: true }),
+    lastEvaluatedAt: timestamp('last_evaluated_at', { withTimezone: true }),
+    brandId: text('brand_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      'routine_definition_cadence_type_check',
+      sql`${t.cadenceType} IN ('calendar', 'completion_relative', 'cycle', 'manual')`,
+    ),
+    check(
+      'routine_definition_execution_policy_check',
+      sql`${t.executionPolicy} IN ('human_task', 'human_triggered', 'automated_capability')`,
+    ),
+    check(
+      'routine_definition_status_check',
+      sql`${t.status} IN ('active', 'paused', 'archived')`,
+    ),
+    index('routine_def_team_idx').on(t.teamId),
+    index('routine_def_project_idx').on(t.projectId),
+    index('routine_def_due_idx').on(t.status, t.nextDueDate),
+    index('routine_def_active_issue_idx').on(t.activeIssueId),
+  ],
+);
+
+export type RoutineDefinition = typeof routineDefinition.$inferSelect;
+export type NewRoutineDefinition = typeof routineDefinition.$inferInsert;
+

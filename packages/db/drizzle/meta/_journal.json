@@ -946,6 +946,20 @@
       "when": 1790334902773,
       "tag": "0134_team_scoped_project_key",
       "breakpoints": true
+    },
+    {
+      "idx": 135,
+      "version": "7",
+      "when": 1790400000000,
+      "tag": "0135_capability_registry",
+      "breakpoints": true
+    },
+    {
+      "idx": 136,
+      "version": "7",
+      "when": 1790500000000,
+      "tag": "0136_routine_definition",
+      "breakpoints": true
     }
   ]
 }
