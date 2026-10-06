@@ -3,6 +3,7 @@ import { useShellRoute } from '@/hooks/useShellRoute';
 import { useTranslations } from 'next-intl';
 import {
   BookOpenText,
+  CalendarDays,
   Inbox,
   LayoutDashboard,
   RefreshCw,
@@ -17,6 +18,7 @@ import {
   inboxPath,
   initiativesPath,
   notesPath,
+  plannerPath,
   projectPath,
   viewPath,
 } from '@/utils/paths';
@@ -116,6 +118,13 @@ export default function SidebarWorkNav({
               disabled={disabled}
             />
           )}
+          <SidebarNavItem
+            href={projectKey ? plannerPath(projectKey) : '#'}
+            icon={CalendarDays}
+            label={t('planner')}
+            active={pathname.includes('/planner')}
+            disabled={disabled}
+          />
           {features.initiatives && can('initiatives', 'read') && (
             <SidebarNavItem
               href={projectKey ? initiativesPath(projectKey) : '#'}

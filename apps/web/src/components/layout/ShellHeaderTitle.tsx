@@ -31,6 +31,7 @@ export default function ShellHeaderTitle({
     if (section) return known(section) ? sectionText(section).label : t('projectSettings');
     if (sub === 'members') return t('members');
     if (sub === 'dashboards') return t('dashboards');
+    if (sub === 'planner') return t('planner');
     if (sub === 'initiatives') return t('initiatives');
     if (sub === 'cycles') return t('cycles');
     if (aiTeamSection) return known(aiTeamSection) ? sectionText(aiTeamSection).label : t('aiTeam');
