@@ -41,6 +41,7 @@ coverage
 # local agent tooling (may contain credentials)
 .codex/
 .claude/settings.local.json
+.neon
 
 # agent scratch space (test docs, drafts)
 .workspace/
