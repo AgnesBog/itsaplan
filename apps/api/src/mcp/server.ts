@@ -39,7 +39,7 @@ export async function buildMcpServer(
   const server = new Server(
     // `name` is the stable programmatic identifier; `title` is the human-readable
     // display name a client shows to the user (per the MCP Implementation spec).
-    { name: 'itsaplan', title: 'Itsaplan', version: '1.0.0' },
+    { name: 'itsaplan', title: 'TaskFlow', version: '1.0.0' },
     // `instructions` reaches the client in the initialize response and covers what
     // no single tool description can: which tool resolves ids, how a column is
     // picked, how far a request to "work on an issue" goes.
