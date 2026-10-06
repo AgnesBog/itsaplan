@@ -144,6 +144,8 @@ export interface IssueRow {
   // UI can filter by custom fields without a per-issue fetch. Only listIssues
   // populates this; mapIssue alone leaves it empty.
   fieldValues: IssueFieldValueEntry[];
+  routineId?: number | null;
+  routineOverridePayload?: Record<string, unknown>;
 }
 
 function mapIssue(row: typeof issue.$inferSelect, projectKey: string): IssueRow {
@@ -176,6 +178,8 @@ function mapIssue(row: typeof issue.$inferSelect, projectKey: string): IssueRow 
     shareExtended: row.shareExtended,
     labelIds: [],
     fieldValues: [],
+    routineId: row.routineId ?? null,
+    routineOverridePayload: (row.routineOverridePayload ?? {}) as Record<string, unknown>,
   };
 }
 
@@ -702,6 +706,8 @@ export interface NewIssueInput {
   startDate?: string | null;
   dueDate?: string | null;
   labelIds?: number[];
+  routineId?: number | null;
+  routineOverridePayload?: Record<string, unknown>;
 }
 
 // Enforces that assignee holds a project member and delegate holds an agent of the
@@ -884,6 +890,8 @@ export async function createIssue(
         estimateMinutes: input.estimateMinutes ?? null,
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
+        routineId: input.routineId ?? null,
+        routineOverridePayload: input.routineOverridePayload ?? {},
         position: Number(posRow.pos),
       })
       .returning({ id: issue.id, createdAt: issue.createdAt });
@@ -993,6 +1001,8 @@ export interface IssuePatch {
   estimateMinutes?: number | null;
   startDate?: string | null;
   dueDate?: string | null;
+  routineId?: number | null;
+  routineOverridePayload?: Record<string, unknown>;
 }
 
 // opts.onlyIfColumnId makes the write conditional: it applies only while the
@@ -1059,6 +1069,8 @@ export async function updateIssue(
   if (patch.estimateMinutes !== undefined) set.estimateMinutes = patch.estimateMinutes;
   if (patch.startDate !== undefined) set.startDate = patch.startDate;
   if (patch.dueDate !== undefined) set.dueDate = patch.dueDate;
+  if (patch.routineId !== undefined) set.routineId = patch.routineId;
+  if (patch.routineOverridePayload !== undefined) set.routineOverridePayload = patch.routineOverridePayload;
 
   const changed = Object.keys(set).length > 0;
   if (changed) {
@@ -1088,6 +1100,12 @@ export async function updateIssue(
       if (before.columnId !== after.columnId) {
         await emitIssueEvent('issue.state_changed', after, actor);
         await applySubtaskAutomation(after, actor);
+        try {
+          const { handleIssueStatusChange } = await import('#modules/routines/service');
+          await handleIssueStatusChange(id, after.columnId);
+        } catch (err) {
+          console.warn('[issues] error handling routine status change:', err);
+        }
       }
     }
   }

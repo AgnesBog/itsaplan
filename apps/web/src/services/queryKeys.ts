@@ -294,4 +294,6 @@ export const qk = {
     ['instanceTeamProjects', teamId, filters] as const,
   instanceTeamMembers: (teamId: number, filters: unknown) =>
     ['instanceTeamMembers', teamId, filters] as const,
+  routines: (params?: { projectId?: number; status?: string }) => ['routines', params] as const,
+  routine: (routineId: number) => ['routine', routineId] as const,
 };

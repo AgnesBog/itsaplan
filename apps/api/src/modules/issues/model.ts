@@ -119,6 +119,8 @@ export const IssueResponse = t.Object({
   shareExtended: t.Boolean(),
   labelIds: t.Array(t.Number()),
   fieldValues: t.Array(IssueFieldValueEntry),
+  routineId: t.Optional(t.Nullable(t.Number())),
+  routineOverridePayload: t.Optional(t.Record(t.String(), t.Any())),
 });
 
 // IssueFieldValueRow from the service: one applicable custom field with its value on
@@ -461,6 +463,12 @@ export const createIssueBody = t.Object({
   labelIds: t.Optional(
     t.Array(t.Integer(), { description: 'Label ids to attach. From get_project.labels.' }),
   ),
+  routineId: t.Optional(
+    t.Nullable(t.Integer({ description: 'Routine id this issue is an occurrence of, or null.' })),
+  ),
+  routineOverridePayload: t.Optional(
+    t.Record(t.String(), t.Any(), { description: 'Tier 2 routine input overrides' }),
+  ),
 });
 
 export const bulkUpdateIssuesBody = t.Object({
@@ -579,6 +587,12 @@ export const updateIssueBody = t.Object({
   dueDate: t.Optional(t.Nullable(isoDate("Due date 'YYYY-MM-DD', or null."))),
   labelIds: t.Optional(
     t.Array(t.Integer(), { description: "Replace the issue's labels with these ids." }),
+  ),
+  routineId: t.Optional(
+    t.Nullable(t.Integer({ description: 'Routine id this issue is an occurrence of, or null to detach.' })),
+  ),
+  routineOverridePayload: t.Optional(
+    t.Record(t.String(), t.Any(), { description: 'Tier 2 routine input overrides' }),
   ),
 });
 

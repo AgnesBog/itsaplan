@@ -74,6 +74,8 @@ export interface Issue {
   shareExtended: boolean;
   labelIds: number[];
   fieldValues: IssueFieldValueEntry[];
+  routineId?: number | null;
+  routineOverridePayload?: Record<string, unknown>;
 }
 
 // A light search result from GET /projects/:key/issues/search: enough to list and
@@ -253,6 +255,8 @@ export interface NewIssueInput {
   startDate?: string | null;
   dueDate?: string | null;
   labelIds?: number[];
+  routineId?: number | null;
+  routineOverridePayload?: Record<string, unknown>;
 }
 
 // The fields a bulk update can set on many issues at once (the board-relevant
@@ -288,6 +292,8 @@ export interface IssuePatch {
   startDate?: string | null;
   dueDate?: string | null;
   labelIds?: number[];
+  routineId?: number | null;
+  routineOverridePayload?: Record<string, unknown>;
 }
 
 export const createIssue = (projectKey: string, input: NewIssueInput) =>
