@@ -352,159 +352,171 @@ export default function NewIssueModal({
         {...dragHandlers}
       >
         {draggedFiles !== null && <NewIssueDropOverlay count={draggedFiles} />}
-        <input
-          ref={titleRef}
-          // `auto` once there is something to read, so a title keeps the script it
-          // was typed in. While the field is empty there is nothing to read from,
-          // and it would fall back to left-to-right and strand the placeholder.
-          dir={title ? 'auto' : undefined}
-          className="w-full bg-transparent text-lg font-semibold outline-none placeholder:text-muted-foreground"
-          placeholder={t('titlePlaceholder')}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <div className={cn('flex min-h-0 flex-col overflow-hidden', fullscreen && 'flex-1')}>
-          <NewIssueBody
-            key={applyCount}
-            section={bodySection}
-            onSectionChange={setBodySection}
-            fullscreen={fullscreen}
-            description={description}
-            onDescriptionChange={setDescription}
-            onDescriptionReady={setDescEditor}
-            bodyDefs={bodyDefs}
-            fieldValues={fieldValues}
-            assignees={project.assignees}
-            onFieldValue={setFieldValue}
-            onFieldEditorReady={(id, editor) => {
-              if (editor) fieldEditors.current.set(id, editor);
-              else fieldEditors.current.delete(id);
-            }}
-            uploadFile={attachments.uploadFile}
+
+        {/* Scrollable Form Content */}
+        <div className={cn('flex min-h-0 flex-col', fullscreen ? 'flex-1 overflow-y-auto pr-1' : '')}>
+          <input
+            ref={titleRef}
+            // `auto` once there is something to read, so a title keeps the script it
+            // was typed in. While the field is empty there is nothing to read from,
+            // and it would fall back to left-to-right and strand the placeholder.
+            dir={title ? 'auto' : undefined}
+            className="w-full bg-transparent text-lg font-semibold outline-none placeholder:text-muted-foreground"
+            placeholder={t('titlePlaceholder')}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
+          <div className={cn('flex min-h-0 flex-col', fullscreen ? 'min-h-[180px] shrink-0' : 'overflow-hidden')}>
+            <NewIssueBody
+              key={applyCount}
+              section={bodySection}
+              onSectionChange={setBodySection}
+              fullscreen={fullscreen}
+              description={description}
+              onDescriptionChange={setDescription}
+              onDescriptionReady={setDescEditor}
+              bodyDefs={bodyDefs}
+              fieldValues={fieldValues}
+              assignees={project.assignees}
+              onFieldValue={setFieldValue}
+              onFieldEditorReady={(id, editor) => {
+                if (editor) fieldEditors.current.set(id, editor);
+                else fieldEditors.current.delete(id);
+              }}
+              uploadFile={attachments.uploadFile}
+            />
+          </div>
+
+          <div
+            className={`${bodyDefs.length > 0 ? 'mt-8' : 'mt-4'} flex flex-wrap items-center gap-2`}
+          >
+            <StatusSelect columns={project.columns} value={columnId} onChange={setColumnId} />
+
+            {project.assignees.some((a) => a.kind === 'member') && (
+              <AssigneeSelect
+                assignees={project.assignees}
+                value={assigneeUserId}
+                onChange={setAssigneeUserId}
+                placeholder={tFields('assignee')}
+              />
+            )}
+
+            {project.assignees.some((a) => a.kind === 'agent') && (
+              <DelegateSelect
+                assignees={project.assignees}
+                value={delegateUserId}
+                onChange={setDelegateUserId}
+                placeholder={tFields('delegate')}
+              />
+            )}
+
+            <PrioritySelect value={priority} onChange={setPriority} />
+
+            {project.issueTypes.length > 0 && (
+              <TypeSelect issueTypes={project.issueTypes} value={typeId} onChange={setTypeId} />
+            )}
+
+            {project.project.initiativesEnabled && (
+              <InitiativeSelect
+                projectKey={project.project.ref}
+                value={initiativeId}
+                onChange={setInitiativeId}
+              />
+            )}
+
+            {project.project.cyclesEnabled && (
+              <CycleSelect projectKey={project.project.ref} value={cycle} onChange={setCycle} />
+            )}
+
+            {project.labels.length > 0 && (
+              <LabelsSelect
+                labels={project.labels}
+                groups={project.labelGroups}
+                value={labelIds}
+                onToggle={toggleLabel}
+              />
+            )}
+
+            {project.project.pointsEstimateEnabled && (
+              <EstimatePill kind="points" value={estimatePoints} onChange={setEstimatePoints} />
+            )}
+
+            {project.project.timeEstimateEnabled && (
+              <EstimatePill kind="time" value={estimateMinutes} onChange={setEstimateMinutes} />
+            )}
+
+            <DatePill
+              value={startDate || null}
+              placeholder={tFields('startDate')}
+              onChange={(v) => setStartDate(v ?? '')}
+              disabled={latestStart ? { after: latestStart } : undefined}
+            />
+
+            <DatePill
+              value={dueDate || null}
+              placeholder={tFields('dueDate')}
+              onChange={(v) => setDueDate(v ?? '')}
+              disabled={earliestDue ? { before: earliestDue } : undefined}
+            />
+
+            {activeDefs.map((def) => (
+              <IssueCustomFieldPill
+                key={def.id}
+                def={def}
+                value={fieldValues[def.id]}
+                assignees={project.assignees}
+                defaultOpen={def.id === justAddedId}
+                onChange={(v) => setFieldValue(def.id, v)}
+              />
+            ))}
+
+            {availableDefs.length > 0 && (
+              <Popover open={addFieldOpen} onOpenChange={setAddFieldOpen}>
+                <PopoverTrigger asChild>
+                  <Pill>
+                    <MoreHorizontal />
+                  </Pill>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder={t('addFieldPlaceholder')} />
+                    <CommandList>
+                      <CommandEmpty>{t('noFields')}</CommandEmpty>
+                      <CommandGroup>
+                        {availableDefs.map((def) => (
+                          <CommandItem
+                            key={def.id}
+                            value={def.name}
+                            onSelect={() => {
+                              setActiveFieldIds((ids) => [...ids, def.id]);
+                              setJustAddedId(def.id);
+                              setAddFieldOpen(false);
+                            }}
+                          >
+                            <span className="flex-1">{def.name}</span>
+                            <span className="text-xs text-muted-foreground">{def.fieldType}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+
+          {errorMessage && <p className="mt-3 text-xs text-destructive">{errorMessage}</p>}
         </div>
 
+        {/* Footer Action Bar */}
         <div
-          className={`${bodyDefs.length > 0 ? 'mt-8' : 'mt-4'} flex flex-wrap items-center gap-2`}
+          className={cn(
+            'flex items-center gap-2 border-t pt-3',
+            fullscreen
+              ? 'sticky bottom-0 z-20 mt-auto bg-background/95 pb-2 pt-3 backdrop-blur-sm'
+              : 'mt-4',
+          )}
         >
-          <StatusSelect columns={project.columns} value={columnId} onChange={setColumnId} />
-
-          {project.assignees.some((a) => a.kind === 'member') && (
-            <AssigneeSelect
-              assignees={project.assignees}
-              value={assigneeUserId}
-              onChange={setAssigneeUserId}
-              placeholder={tFields('assignee')}
-            />
-          )}
-
-          {project.assignees.some((a) => a.kind === 'agent') && (
-            <DelegateSelect
-              assignees={project.assignees}
-              value={delegateUserId}
-              onChange={setDelegateUserId}
-              placeholder={tFields('delegate')}
-            />
-          )}
-
-          <PrioritySelect value={priority} onChange={setPriority} />
-
-          {project.issueTypes.length > 0 && (
-            <TypeSelect issueTypes={project.issueTypes} value={typeId} onChange={setTypeId} />
-          )}
-
-          {project.project.initiativesEnabled && (
-            <InitiativeSelect
-              projectKey={project.project.ref}
-              value={initiativeId}
-              onChange={setInitiativeId}
-            />
-          )}
-
-          {project.project.cyclesEnabled && (
-            <CycleSelect projectKey={project.project.ref} value={cycle} onChange={setCycle} />
-          )}
-
-          {project.labels.length > 0 && (
-            <LabelsSelect
-              labels={project.labels}
-              groups={project.labelGroups}
-              value={labelIds}
-              onToggle={toggleLabel}
-            />
-          )}
-
-          {project.project.pointsEstimateEnabled && (
-            <EstimatePill kind="points" value={estimatePoints} onChange={setEstimatePoints} />
-          )}
-
-          {project.project.timeEstimateEnabled && (
-            <EstimatePill kind="time" value={estimateMinutes} onChange={setEstimateMinutes} />
-          )}
-
-          <DatePill
-            value={startDate || null}
-            placeholder={tFields('startDate')}
-            onChange={(v) => setStartDate(v ?? '')}
-            disabled={latestStart ? { after: latestStart } : undefined}
-          />
-
-          <DatePill
-            value={dueDate || null}
-            placeholder={tFields('dueDate')}
-            onChange={(v) => setDueDate(v ?? '')}
-            disabled={earliestDue ? { before: earliestDue } : undefined}
-          />
-
-          {activeDefs.map((def) => (
-            <IssueCustomFieldPill
-              key={def.id}
-              def={def}
-              value={fieldValues[def.id]}
-              assignees={project.assignees}
-              defaultOpen={def.id === justAddedId}
-              onChange={(v) => setFieldValue(def.id, v)}
-            />
-          ))}
-
-          {availableDefs.length > 0 && (
-            <Popover open={addFieldOpen} onOpenChange={setAddFieldOpen}>
-              <PopoverTrigger asChild>
-                <Pill>
-                  <MoreHorizontal />
-                </Pill>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-0" align="start">
-                <Command>
-                  <CommandInput placeholder={t('addFieldPlaceholder')} />
-                  <CommandList>
-                    <CommandEmpty>{t('noFields')}</CommandEmpty>
-                    <CommandGroup>
-                      {availableDefs.map((def) => (
-                        <CommandItem
-                          key={def.id}
-                          value={def.name}
-                          onSelect={() => {
-                            setActiveFieldIds((ids) => [...ids, def.id]);
-                            setJustAddedId(def.id);
-                            setAddFieldOpen(false);
-                          }}
-                        >
-                          <span className="flex-1">{def.name}</span>
-                          <span className="text-xs text-muted-foreground">{def.fieldType}</span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-
-        {errorMessage && <p className="mt-3 text-xs text-destructive">{errorMessage}</p>}
-
-        <div className="mt-4 flex items-center gap-2 border-t pt-3">
           <NewIssueAttachButton onPick={attachments.attach} />
           <NewIssueAttachmentStrip
             items={attachments.pending}
